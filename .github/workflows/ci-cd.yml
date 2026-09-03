@@ -3,11 +3,18 @@ name: CI/CD app_conf
 on:
   push:
     branches: [main]
+    tags: ['v*.*.*']
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag existente a empaquetar (backfill, ej. v1.1.0)'
+        required: true
 
 jobs:
   validate:
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,6 +27,30 @@ jobs:
             echo "checking $f"
             awk -v file="$f" 'NF && $0 !~ /^[A-Za-z_][A-Za-z0-9_]*=.*/ { print "linea invalida en " file ": " $0; exit 1 }' "$f" || exit 1
           done
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Empaquetar .conf
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          tar czf "app-conf-${tag}.tar.gz" *.conf
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+      - name: Publicar release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$TAG" "app-conf-${TAG}.tar.gz" \
+            --repo "${{ github.repository }}" \
+            --title "app_conf $TAG" \
+            --notes "Paquete self-contained de app_conf ($TAG)." \
+            || gh release upload "$TAG" "app-conf-${TAG}.tar.gz" --repo "${{ github.repository }}" --clobber
 
   # deploy:
   #   needs: validate
