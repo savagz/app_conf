@@ -1,0 +1,36 @@
+name: CI/CD app_conf
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar sintaxis key=value de los .conf
+        run: |
+          shopt -s nullglob
+          files=(*.conf)
+          [ ${#files[@]} -gt 0 ] || { echo "no hay .conf en el repo"; exit 1; }
+          for f in "${files[@]}"; do
+            echo "checking $f"
+            awk -v file="$f" 'NF && $0 !~ /^[A-Za-z_][A-Za-z0-9_]*=.*/ { print "linea invalida en " file ": " $0; exit 1 }' "$f" || exit 1
+          done
+
+  # deploy:
+  #   needs: validate
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #   runs-on: ubuntu-latest
+  #   environment: production
+  #   steps:
+  #     - uses: appleboy/ssh-action@v1
+  #       with:
+  #         host: ${{ secrets.DEPLOY_HOST }}
+  #         username: ${{ secrets.DEPLOY_USER }}
+  #         key: ${{ secrets.DEPLOY_SSH_KEY }}
+  #         script: |
+  #           lxc exec labs-php -- bash -c "cd /opt/app_conf && git pull --ff-only"
