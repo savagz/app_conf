@@ -11,6 +11,7 @@ Carpeta de datos, sin código. Solo `app_php` la lee (vía `CONF_DIR`, ver `app_
 | `app.conf`         | `name`, `version`, `environment`, `debug`, `locale`                   |
 | `users.conf`       | `admin_user`, `admin_email`, `max_users`, `default_role`              |
 | `features.conf`    | `feature_dark_mode`, `feature_beta_api`, `feature_new_dashboard`, `rollout_percentage` |
+| `cache.conf`        | `enabled`, `ttl_seconds`, `max_size_mb`, `eviction_policy`           |
 
 Formato: `key=value` por línea, estilo INI plano (`parse_ini_file` con `INI_SCANNER_TYPED`, tipa bool/int automático).
 
